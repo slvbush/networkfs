@@ -1,2 +1,136 @@
-# networkfs
-Network file system client implemented with FUSE low-level API featuring lazy loading and in-memory caching for HTTP-backed storage.
+# NetworkFS — клиент сетевой файловой системы (FUSE, C++20)
+
+NetworkFS — userspace-клиент для удалённой файловой системы, реализованный с использованием **FUSE low-level API** на **C++20**. Проект проксирует вызовы POSIX/VFS в HTTP-запросы к удалённому хранилищу и предоставляет простой POSIX-подобный интерфейс к файлам и директориям.
+
+---
+
+# Архитектура
+```
+Kernel
+  ↓
+FUSE
+  ↓
+NetworkFS
+  ↓
+HTTP API
+  ↓
+Remote storage
+```
+
+Компоненты:
+
+* приём вызовов ядра через `fuse_lowlevel_ops`;
+* трансляция VFS-операций в HTTP-запросы;
+* локальное управление inode и дескрипторами;
+* in-memory cache для открытых файлов (`fi->fh`);
+* маппинг ошибок бэкенда в POSIX `errno`.
+
+---
+
+# Поддерживаемые операции
+
+Реализованы (обработчики FUSE):
+
+* `lookup`
+* `getattr`
+* `readdir` (readdir → list)
+* `open` / `release`
+* `read` (поддержка offset)
+* `write` (лимит по размеру)
+* `create` / `unlink`
+* `mkdir` / `rmdir`
+* `flush` / `fsync`
+* `setattr` (частично: поддерживается изменение размера файла)
+* `link`, `forget`
+
+---
+
+# Технический стек
+
+* Язык: **C++20**
+* FUSE: `libfuse3`
+* HTTP: `cpp-httplib` (как и libfuse, встраиваемая версия в `subprojects/`)
+* Сборка: **Meson**
+* Тесты: gtest
+
+---
+
+# Ограничения
+
+* **Максимальный размер файла:** **512 байт**.
+* **Максимальное число записей в директории:** **16**.
+* **Максимальная длина имени файла:** **255 байт**.
+* **Кэширование:** in-memory cache реализован **только** для открытых дескрипторов (`fi->fh`). После `release` буферы освобождаются — глобального или персистентного локального кэша нет.
+* **Консистентность:** нет гарантий согласованности между несколькими клиентами; поведение при конкурентных модификациях зависит от сервера.
+* **Токен аутентификации:** текущая реализация передаёт токен в URL-пути (`/.../<token>/fs/...`). Это небезопасно для публичных сетей. 
+* **Ошибки сети**: в текущей реализации обработка ошибок сети ограничена.
+
+---
+# Сборка
+
+**Зависимости (Ubuntu):**
+
+```bash
+sudo apt install build-essential meson ninja-build pkg-config libfuse3-dev
+```
+
+**Сборка:**
+
+```bash
+meson setup build
+```
+
+---
+
+# Запуск и примеры
+
+Экспортируйте токен доступа (пример):
+
+```bash
+export NETWORKFS_TOKEN="your_token_here"
+```
+
+Создайте точку монтирования и смонтируйте:
+
+```bash
+mkdir ./mountpoint
+./build/networkfs ./mountpoint [options]
+```
+
+Размонтирование:
+
+```bash
+fusermount3 -u ./mountpoint
+```
+
+Пример использования:
+
+```bash
+ls ./mountpoint
+cat ./mountpoint/somefile
+echo "hello" > ./mountpoint/newfile
+```
+
+---
+
+# Структура репозитория
+
+```
+src/
+  main.cpp        # точка входа, инициализация FUSE
+  inode.cpp/.h    # реализация callback'ов FUSE
+  http.cpp/.h     # слой HTTP-взаимодействия (cpp-httplib)
+  util.h          # утилиты, коды ошибок, конвертер ino->string
+tests/            # gtest
+README.md
+```
+
+---
+
+# Тесты
+* **gtest** покрытие корректности работы callback'ов, используется мок-сервер вуза.
+## Запуск тестов
+```
+$ meson test -C build --verbose
+```
+
