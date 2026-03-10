@@ -76,25 +76,19 @@ sudo apt install build-essential meson ninja-build pkg-config libfuse3-dev
 
 **Сборка:**
 
-```bash
-meson setup build
+```
+$ meson setup build
+$ meson compile -C build
 ```
 
 ---
 
 # Запуск и примеры
 
-Экспортируйте токен доступа (пример):
-
-```bash
-export NETWORKFS_TOKEN="your_token_here"
+Для запуска файловой системы необходимо передать токен через переменную окружения NETWORKFS_TOKEN и указать точку монтирования:
 ```
-
-Создайте точку монтирования и смонтируйте:
-
-```bash
-mkdir ./mountpoint
-./build/networkfs ./mountpoint [options]
+$ mkdir mnt
+$ NETWORKFS_TOKEN=your-token ./build/networkfs mnt
 ```
 
 Размонтирование:
@@ -133,4 +127,3 @@ README.md
 ```
 $ meson test -C build --verbose
 ```
-
