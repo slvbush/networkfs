@@ -52,10 +52,8 @@ void process_error_code(const std::string& foo_name, int code,
   fuse_reply_err(req, server_to_posix.find(code)->second);
 }
 
-void networkfs_init(void* userdata, struct fuse_conn_info* conn) {
-  (void)userdata;
-  (void)conn;
-  // TODO: Implement initialization if needed
+void networkfs_init(void*, struct fuse_conn_info*) {
+    // initialization if needed
 }
 
 void networkfs_destroy(void* private_data) {
@@ -287,9 +285,8 @@ void networkfs_release(fuse_req_t req, fuse_ino_t ino,
   fuse_reply_err(req, 0);
 }
 
-void networkfs_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
+void networkfs_read(fuse_req_t req, fuse_ino_t, size_t size, off_t off,
                     struct fuse_file_info* fi) {
-  (void)ino;
   if (fi) {
     fuse_reply_buf(req,
                    (reinterpret_cast<std::vector<char>*>(fi->fh)->data()) + off,
@@ -351,9 +348,8 @@ void networkfs_flush(fuse_req_t req, fuse_ino_t ino,
   }
 }
 
-void networkfs_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
+void networkfs_fsync(fuse_req_t req, fuse_ino_t ino, int,
                      struct fuse_file_info* fi) {
-  (void)datasync;  // no meta data
   if (fi) {
     networkfs_sync_impl(req, ino, fi, "fsync");
   } else {
@@ -407,9 +403,7 @@ void networkfs_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
   }
 }
 
-void networkfs_forget(fuse_req_t req, fuse_ino_t ino, uint64_t nlookup) {
-  (void)ino;
-  (void)nlookup;
+void networkfs_forget(fuse_req_t req, fuse_ino_t, uint64_t) {
   fuse_reply_none(req);
 }
 
